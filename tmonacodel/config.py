@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 
 @dataclass(frozen=True)
 class TournamentConfig:
-    n_players: int = 120
+    n_players: int = 128
     n_qualifiers: int = 64
     n_matches: int = 10
     best_of: int = 5

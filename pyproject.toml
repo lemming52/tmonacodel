@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "tmonacodel"
 version = "0.1.0"
 description = "Trackmania Monte Carlo tournament simulator"
-requires-python = ">=3.10"
+requires-python = ">=3.13"
 dependencies = [
     "numpy",
     "pandas",
