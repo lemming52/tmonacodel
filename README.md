@@ -61,22 +61,31 @@ pytest
 | Module | Responsibility |
 |---|---|
 | `config.py` | `TournamentConfig` frozen dataclass — all knobs in one place |
-| `racer.py` | `Racer` dataclass + `make_racer_pool` |
+| `player.py` | `Player` dataclass + `make_player_pool` |
 | `scoring.py` | Points table, built once and reused |
-| `elimination.py` | Hot path: one `rng.permutation` + fancy-index scatter per match |
-| `match.py` | `qualify_players` + `simulate_match` |
-| `season.py` | Best-N-of-M rule via numpy sort |
+| `race.py` | Hot path: one `rng.permutation` + fancy-index scatter (39 elimination rounds) |
+| `cup.py` | `qualify_players` + `simulate_cup` (qualification + race for one COTW) |
+| `tournament.py` | Best-N-of-M rule via numpy sort (one Elite Cup) |
 | `simulation.py` | Monte Carlo driver with a single seeded RNG |
 | `aggregation.py` | `SimulationResults` — public results API |
 
 ## Tournament format
 
-The default config models a 120-player field:
+The default config models the Elite Cup format with a 128-player field:
 
-- **Qualification**: 64 players advance from 128 via head-to-head matches
-- **Match format**: best 5 of 10 per player
+- **Format**: Cup of the Week (COTW) × 10 cups; best 5 of 10 scores count (Elite Cup)
+- **Qualification**: 64 players advance from 128 per cup
 - **Elimination stages**: 24 rounds eliminating 2 per round, then 15 rounds eliminating 1
 - **Simulations**: 10,000 runs per call (adjust via `n_simulations`)
+
+### Terminology
+
+| Official name | Code term |
+|---|---|
+| Cup of the Week (COTW) | `race` |
+| Elite Cup | `tournament` |
+| Round within a COTW | `round` |
+| Individual competitor | `player` |
 
 ## Name
 

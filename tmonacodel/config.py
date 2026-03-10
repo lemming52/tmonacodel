@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 class TournamentConfig:
     n_players: int = 128
     n_qualifiers: int = 64
-    n_matches: int = 10
+    n_cups: int = 10
     best_of: int = 5
     # Each tuple: (n_rounds, n_eliminated_per_round)
     elimination_stages: tuple[tuple[int, int], ...] = ((24, 2), (15, 1))
@@ -21,9 +21,9 @@ class TournamentConfig:
                 f"elimination_stages eliminate {total_eliminated} players but "
                 f"n_qualifiers={self.n_qualifiers} requires {self.n_qualifiers - 1} eliminations"
             )
-        if self.best_of > self.n_matches:
+        if self.best_of > self.n_cups:
             raise ValueError(
-                f"best_of={self.best_of} cannot exceed n_matches={self.n_matches}"
+                f"best_of={self.best_of} cannot exceed n_cups={self.n_cups}"
             )
         if self.n_qualifiers > self.n_players:
             raise ValueError(

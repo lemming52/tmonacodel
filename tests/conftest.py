@@ -13,7 +13,7 @@ def small_config():
     return TournamentConfig(
         n_players=20,
         n_qualifiers=8,
-        n_matches=4,
+        n_cups=4,
         best_of=2,
         elimination_stages=((3, 2), (1, 1)),  # 6 + 1 = 7 elim + 1 survivor = 8
         n_simulations=100,

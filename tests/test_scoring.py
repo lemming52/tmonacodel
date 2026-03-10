@@ -83,4 +83,4 @@ class TestConfigValidation:
 
     def test_best_of_exceeds_matches(self):
         with pytest.raises(ValueError, match="best_of"):
-            TournamentConfig(n_matches=5, best_of=6)
+            TournamentConfig(n_cups=5, best_of=6)

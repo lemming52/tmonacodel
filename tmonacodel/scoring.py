@@ -53,7 +53,8 @@ def build_finish_position_lookup(config: TournamentConfig) -> np.ndarray:
       - index 0 is eliminated first (worst finish)
       - index n_qualifiers-1 is the last standing (1st place)
 
-    Players eliminated in the same round share the same finish position.
+    Players eliminated in the same round get consecutive unique positions (e.g. 48 and 49).
+    Their points are equal since build_points_table assigns the same value to both positions.
     """
     n = config.n_qualifiers
     finish_positions = np.empty(n, dtype=np.int64)
@@ -104,12 +105,15 @@ def build_finish_position_lookup(config: TournamentConfig) -> np.ndarray:
         # Adjust for paired positions
         # Actually all n_elim players eliminated in same round share same finish_pos
 
-    # Reassign correctly: ties share finish_pos (not finish_pos + j)
+    # Assign consecutive unique positions within each elimination group.
+    # Players eliminated in the same round get adjacent positions (e.g. 48 and 49)
+    # rather than sharing the same position. Their points are equal since
+    # build_points_table assigns the same value to both positions in each pair.
     lookup2 = np.empty(n, dtype=np.int64)
     perm_idx = n - 1
     for finish_pos, count in rounds:
-        for _ in range(count):
-            lookup2[perm_idx] = finish_pos
+        for j in range(count):
+            lookup2[perm_idx] = finish_pos + j
             perm_idx -= 1
 
     return lookup2

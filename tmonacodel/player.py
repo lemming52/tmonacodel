@@ -8,27 +8,27 @@ from .config import TournamentConfig
 
 
 @dataclass(frozen=True)
-class Racer:
-    racer_id: int  # stable 0-based index — key for all numpy array lookups
+class Player:
+    player_id: int  # stable 0-based index — key for all numpy array lookups
     name: str
     country: str = ""
     # Extension point: add skill: float = 1.0 here later
 
 
-def make_racer_pool(
+def make_player_pool(
     config: TournamentConfig,
     player_data: list[tuple[str, str]] | None = None,
-) -> list[Racer]:
-    """Create a pool of n_players racers with sequential IDs.
+) -> list[Player]:
+    """Create a pool of n_players players with sequential IDs.
 
     If player_data is provided (list of (name, country)), use those for the
-    first len(player_data) racers; fill the rest with generic placeholders.
+    first len(player_data) players; fill the rest with generic placeholders.
     """
-    racers: list[Racer] = []
+    players: list[Player] = []
     if player_data:
         for i, (name, country) in enumerate(player_data[: config.n_players]):
-            racers.append(Racer(racer_id=i, name=name, country=country))
-    generic_start = len(racers)
+            players.append(Player(player_id=i, name=name, country=country))
+    generic_start = len(players)
     n_generics = config.n_players - generic_start
     if n_generics > 0:
         if player_data:
@@ -40,7 +40,7 @@ def make_racer_pool(
         else:
             assigned = [""] * n_generics
         for j in range(n_generics):
-            racers.append(
-                Racer(racer_id=generic_start + j, name=f"Generic_{j:02d}", country=assigned[j])
+            players.append(
+                Player(player_id=generic_start + j, name=f"Generic_{j:02d}", country=assigned[j])
             )
-    return racers
+    return players

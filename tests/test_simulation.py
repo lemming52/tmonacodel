@@ -9,32 +9,32 @@ class TestRunMonteCarlo:
         results = run_monte_carlo(TournamentConfig(n_simulations=50, random_seed=0))
         assert results is not None
 
-    def test_all_season_points_shape(self, default_config):
+    def test_all_tournament_points_shape(self, default_config):
         cfg = TournamentConfig(n_simulations=50, random_seed=0)
         results = run_monte_carlo(cfg)
-        assert results.all_season_points.shape == (50, cfg.n_players)
+        assert results.all_tournament_points.shape == (50, cfg.n_players)
 
-    def test_all_season_ranks_shape(self, default_config):
+    def test_all_tournament_ranks_shape(self, default_config):
         cfg = TournamentConfig(n_simulations=50, random_seed=0)
         results = run_monte_carlo(cfg)
-        assert results.all_season_ranks.shape == (50, cfg.n_players)
+        assert results.all_tournament_ranks.shape == (50, cfg.n_players)
 
     def test_reproducible(self):
         cfg = TournamentConfig(n_simulations=20, random_seed=42)
         r1 = run_monte_carlo(cfg)
         r2 = run_monte_carlo(cfg)
-        np.testing.assert_array_equal(r1.all_season_points, r2.all_season_points)
+        np.testing.assert_array_equal(r1.all_tournament_points, r2.all_tournament_points)
 
     def test_different_seeds_differ(self):
         r1 = run_monte_carlo(TournamentConfig(n_simulations=20, random_seed=1))
         r2 = run_monte_carlo(TournamentConfig(n_simulations=20, random_seed=2))
-        assert not np.array_equal(r1.all_season_points, r2.all_season_points)
+        assert not np.array_equal(r1.all_tournament_points, r2.all_tournament_points)
 
     def test_ranks_range(self):
         cfg = TournamentConfig(n_simulations=20, random_seed=0)
         results = run_monte_carlo(cfg)
-        assert results.all_season_ranks.min() >= 1
-        assert results.all_season_ranks.max() <= cfg.n_players
+        assert results.all_tournament_ranks.min() >= 1
+        assert results.all_tournament_ranks.max() <= cfg.n_players
 
     def test_summary_dataframe_rows(self):
         cfg = TournamentConfig(n_simulations=20, random_seed=0)
@@ -46,7 +46,7 @@ class TestRunMonteCarlo:
         cfg = TournamentConfig(n_simulations=20, random_seed=0)
         results = run_monte_carlo(cfg)
         df = results.summary_dataframe()
-        for col in ["racer_id", "name", "mean_rank", "median_rank", "prob_top_N"]:
+        for col in ["player_id", "name", "mean_rank", "median_rank", "prob_top_N"]:
             assert col in df.columns
 
     def test_prob_top_n_between_0_and_1(self):
@@ -76,7 +76,7 @@ class TestRunMonteCarlo:
 
     def test_default_config_runs(self):
         results = run_monte_carlo(TournamentConfig(n_simulations=10, random_seed=0))
-        assert results.all_season_points.shape[0] == 10
+        assert results.all_tournament_points.shape[0] == 10
 
     def test_player_data_names_in_results(self):
         """Real player names should appear in summary when player_data is passed."""

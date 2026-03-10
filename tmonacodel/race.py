@@ -2,13 +2,13 @@ from __future__ import annotations
 import numpy as np
 
 
-def simulate_elimination(
+def simulate_race(
     n_qualifiers: int,
     finish_pos_lookup: np.ndarray,
     rng: np.random.Generator,
 ) -> np.ndarray:
     """
-    Simulate one match's elimination stage.
+    Simulate the race stage of a cup: 39 rounds of elimination for n_qualifiers players.
 
     Returns finish_positions: ndarray shape (n_qualifiers,)
       finish_positions[i] = finish position of qualifier i (1-based, lower is better)

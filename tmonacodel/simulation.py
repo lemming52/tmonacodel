@@ -3,9 +3,9 @@ import numpy as np
 
 from .aggregation import SimulationResults
 from .config import TournamentConfig
-from .racer import make_racer_pool
+from .player import make_player_pool
 from .scoring import build_finish_position_lookup, build_points_table
-from .season import simulate_season
+from .tournament import simulate_tournament
 
 
 def run_monte_carlo(
@@ -13,38 +13,38 @@ def run_monte_carlo(
     player_data: list[tuple[str, str]] | None = None,
 ) -> SimulationResults:
     """
-    Run n_simulations full seasons and return aggregated results.
+    Run n_simulations full Elite Cup tournaments and return aggregated results.
 
     Uses a single seeded RNG for full reproducibility.
     If player_data is provided (list of (name, country)), it is forwarded to
-    make_racer_pool to populate the racer pool with real players.
+    make_player_pool to populate the player pool with real players.
     """
     if config is None:
         config = TournamentConfig()
 
     rng = np.random.default_rng(config.random_seed)
-    racers = make_racer_pool(config, player_data)
+    players = make_player_pool(config, player_data)
     points_table = build_points_table(config.n_qualifiers)
     finish_pos_lookup = build_finish_position_lookup(config)
 
     # Preallocate output arrays
-    all_season_points = np.empty((config.n_simulations, config.n_players), dtype=np.int64)
-    all_season_ranks = np.empty((config.n_simulations, config.n_players), dtype=np.int64)
+    all_tournament_points = np.empty((config.n_simulations, config.n_players), dtype=np.int64)
+    all_tournament_ranks = np.empty((config.n_simulations, config.n_players), dtype=np.int64)
 
     for sim in range(config.n_simulations):
-        season_points = simulate_season(config, points_table, finish_pos_lookup, rng)
-        all_season_points[sim] = season_points
+        tournament_points = simulate_tournament(config, points_table, finish_pos_lookup, rng)
+        all_tournament_points[sim] = tournament_points
 
         # Rank: 1 = highest points. Use argsort twice for dense rank.
         # Negate for descending sort; ties get the same rank via scipy-style logic.
-        order = np.argsort(-season_points, kind="stable")
+        order = np.argsort(-tournament_points, kind="stable")
         ranks = np.empty(config.n_players, dtype=np.int64)
         ranks[order] = np.arange(1, config.n_players + 1)
-        all_season_ranks[sim] = ranks
+        all_tournament_ranks[sim] = ranks
 
     return SimulationResults(
         config=config,
-        racers=racers,
-        all_season_points=all_season_points,
-        all_season_ranks=all_season_ranks,
+        players=players,
+        all_tournament_points=all_tournament_points,
+        all_tournament_ranks=all_tournament_ranks,
     )
