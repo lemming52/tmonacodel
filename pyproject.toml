@@ -1,0 +1,25 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tmonacodel"
+version = "0.1.0"
+description = "Trackmania Monte Carlo tournament simulator"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy",
+    "pandas",
+    "matplotlib",
+    "seaborn",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "jupyter",
+    "jupyterlab",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["tmonacodel"]

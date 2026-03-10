@@ -1,0 +1,148 @@
+from __future__ import annotations
+from dataclasses import dataclass
+
+import numpy as np
+import pandas as pd
+
+from .config import TournamentConfig
+from .racer import Racer
+
+
+@dataclass
+class SimulationResults:
+    config: TournamentConfig
+    racers: list[Racer]
+    all_season_points: np.ndarray  # shape (n_sims, n_players)
+    all_season_ranks: np.ndarray   # shape (n_sims, n_players)
+
+    def summary_dataframe(self) -> pd.DataFrame:
+        """
+        Returns DataFrame with one row per player:
+          racer_id, name, mean_rank, median_rank,
+          p10_points, p50_points, p90_points, prob_top_N
+        """
+        n = self.config.n_players
+        rows = []
+        for i in range(n):
+            ranks = self.all_season_ranks[:, i]
+            points = self.all_season_points[:, i]
+            rows.append(
+                {
+                    "racer_id": self.racers[i].racer_id,
+                    "name": self.racers[i].name,
+                    "country": self.racers[i].country,
+                    "mean_rank": float(np.mean(ranks)),
+                    "median_rank": float(np.median(ranks)),
+                    "p10_points": int(np.percentile(points, 10)),
+                    "p50_points": int(np.percentile(points, 50)),
+                    "p90_points": int(np.percentile(points, 90)),
+                    "prob_top_N": float(np.mean(ranks <= self.config.top_n_cutoff)),
+                }
+            )
+        df = pd.DataFrame(rows)
+        df = df.sort_values("mean_rank").reset_index(drop=True)
+        return df
+
+    def nation_summary_dataframe(self) -> pd.DataFrame:
+        """
+        Returns DataFrame grouped by country with player count and mean qual prob.
+        Sorted descending by player count, then mean qual prob.
+        """
+        df = self.summary_dataframe()
+        grouped = (
+            df.groupby("country")
+            .agg(
+                player_count=("name", "count"),
+                mean_qual_prob=("prob_top_N", "mean"),
+                mean_rank=("mean_rank", "mean"),
+            )
+            .reset_index()
+            .sort_values(["player_count", "mean_qual_prob"], ascending=[False, False])
+            .reset_index(drop=True)
+        )
+        return grouped
+
+    def ewc_qualifying_score(self, top_n: int = 8) -> int:
+        """
+        Return PQ: the minimum score that would have placed in the top `top_n`
+        in every simulation (guaranteed EWC qualifying threshold).
+        """
+        cutoffs = np.sort(self.all_season_points, axis=1)[:, -top_n]
+        return int(np.max(cutoffs))
+
+    def ewc_qualification_curve(self, top_n: int = 8, step: int = 50) -> pd.DataFrame:
+        """
+        For scores from PQ down to 0 (stepping by `step`), return the fraction
+        of simulations in which that score would have placed top `top_n`.
+        Stops early once prob_qualify reaches 0.
+        """
+        pq = self.ewc_qualifying_score(top_n)
+        cutoffs = np.sort(self.all_season_points, axis=1)[:, -top_n]
+        rows = []
+        score = pq
+        while score >= 0:
+            prob = float(np.mean(cutoffs <= score))
+            rows.append({"score": score, "pq_offset": pq - score, "prob_qualify": prob})
+            if prob == 0.0:
+                break
+            score -= step
+        return pd.DataFrame(rows)
+
+    def nation_topping_scores(self) -> pd.DataFrame:
+        """
+        For each nation with ≥ 2 players, return the minimum points score
+        needed to top the national leaderboard in 100% of simulations.
+        """
+        from collections import defaultdict
+        nation_indices: dict[str, list[int]] = defaultdict(list)
+        for r in self.racers:
+            if r.country:
+                nation_indices[r.country].append(r.racer_id)
+        rows = []
+        for country, indices in sorted(nation_indices.items()):
+            if len(indices) < 2:
+                continue
+            nation_pts = self.all_season_points[:, indices]
+            min_to_top = int(np.max(nation_pts))
+            rows.append({
+                "country": country,
+                "player_count": len(indices),
+                "min_score_to_top_nation": min_to_top,
+            })
+        return (
+            pd.DataFrame(rows)
+            .sort_values("min_score_to_top_nation", ascending=False)
+            .reset_index(drop=True)
+        )
+
+    def rank_points_profile(self) -> pd.DataFrame:
+        """
+        Returns DataFrame with one row per finishing rank (1 = best):
+          rank, mean_points, p10_points, p90_points
+        """
+        n_sims = self.config.n_simulations
+        order = np.argsort(self.all_season_ranks, axis=1)
+        sorted_pts = self.all_season_points[np.arange(n_sims)[:, None], order]
+        return pd.DataFrame({
+            "rank": np.arange(1, self.config.n_players + 1),
+            "mean_points": np.round(sorted_pts.mean(axis=0), 1),
+            "p10_points": np.percentile(sorted_pts, 10, axis=0).astype(int),
+            "p90_points": np.percentile(sorted_pts, 90, axis=0).astype(int),
+        })
+
+    def qualification_probabilities(self) -> pd.Series:
+        """
+        Returns Series indexed by player name, sorted descending by P(rank ≤ top_n_cutoff).
+        """
+        probs = {}
+        for i in range(self.config.n_players):
+            ranks = self.all_season_ranks[:, i]
+            probs[self.racers[i].name] = float(np.mean(ranks <= self.config.top_n_cutoff))
+        series = pd.Series(probs, name="prob_qualify")
+        return series.sort_values(ascending=False)
+
+    def points_distribution(self, racer_id: int) -> np.ndarray:
+        """
+        Returns array of shape (n_sims,) with season point totals for the given racer_id.
+        """
+        return self.all_season_points[:, racer_id].copy()
