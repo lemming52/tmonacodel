@@ -90,8 +90,9 @@ class SimulationResults:
 
     def nation_topping_scores(self) -> pd.DataFrame:
         """
-        For each nation with ≥ 2 players, return the minimum points score
-        needed to top the national leaderboard in 100% of simulations.
+        For each nation with ≥ 2 players, return the P90 points score
+        needed to top the national leaderboard (i.e. the 90th percentile of
+        the per-simulation national maximum, avoiding outlier distortion).
         """
         from collections import defaultdict
         nation_indices: dict[str, list[int]] = defaultdict(list)
@@ -103,15 +104,16 @@ class SimulationResults:
             if len(indices) < 2:
                 continue
             nation_pts = self.all_season_points[:, indices]
-            min_to_top = int(np.max(nation_pts))
+            sim_maxes = nation_pts.max(axis=1)  # best score per simulation
+            p90_to_top = int(np.percentile(sim_maxes, 90))
             rows.append({
                 "country": country,
                 "player_count": len(indices),
-                "min_score_to_top_nation": min_to_top,
+                "p90_score_to_top_nation": p90_to_top,
             })
         return (
             pd.DataFrame(rows)
-            .sort_values("min_score_to_top_nation", ascending=False)
+            .sort_values("p90_score_to_top_nation", ascending=False)
             .reset_index(drop=True)
         )
 
