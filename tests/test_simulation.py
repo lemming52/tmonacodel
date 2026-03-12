@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from tmonacodel import TournamentConfig, run_monte_carlo, REAL_PLAYERS
+from tmonacodel import TournamentConfig, run_monte_carlo, REAL_PLAYERS, RealCupResults
 
 
 class TestRunMonteCarlo:
@@ -116,3 +116,54 @@ class TestRunMonteCarlo:
         # Allow wide tolerance since best-5-of-10 creates variance
         assert probs.mean() > 0.05
         assert probs.std() < 0.15  # not too spread out with uniform mechanics
+
+    def test_real_results_accepted(self):
+        cfg = TournamentConfig(n_simulations=10, random_seed=0)
+        real: RealCupResults = [{"Mudda": 1000, "Binkss": 700}, None, None]
+        results = run_monte_carlo(cfg, player_data=REAL_PLAYERS, real_cup_results=real)
+        assert results.all_tournament_points.shape == (10, cfg.n_players)
+        assert results.all_tournament_ranks.shape == (10, cfg.n_players)
+
+    def test_real_results_reproducible(self):
+        cfg = TournamentConfig(n_simulations=20, random_seed=42)
+        real: RealCupResults = [{"Mudda": 1000}, None]
+        r1 = run_monte_carlo(cfg, player_data=REAL_PLAYERS, real_cup_results=real)
+        r2 = run_monte_carlo(cfg, player_data=REAL_PLAYERS, real_cup_results=real)
+        np.testing.assert_array_equal(r1.all_tournament_points, r2.all_tournament_points)
+
+    def test_real_results_all_fixed_ignores_rng(self):
+        """When every cup is fixed, two different seeds produce identical output."""
+        cfg = TournamentConfig(n_simulations=10, random_seed=1)
+        real: RealCupResults = [{"Mudda": 500}] * cfg.n_cups
+        r1 = run_monte_carlo(cfg, player_data=REAL_PLAYERS, real_cup_results=real)
+
+        cfg2 = TournamentConfig(n_simulations=10, random_seed=999)
+        r2 = run_monte_carlo(cfg2, player_data=REAL_PLAYERS, real_cup_results=real)
+        np.testing.assert_array_equal(r1.all_tournament_points, r2.all_tournament_points)
+
+    def test_real_results_shorter_than_n_cups(self):
+        """Trailing cups are simulated, so output should vary across seeds."""
+        real: RealCupResults = [{"Mudda": 1000}]  # only 1 of n_cups fixed
+        r1 = run_monte_carlo(
+            TournamentConfig(n_simulations=20, random_seed=1),
+            player_data=REAL_PLAYERS, real_cup_results=real,
+        )
+        r2 = run_monte_carlo(
+            TournamentConfig(n_simulations=20, random_seed=2),
+            player_data=REAL_PLAYERS, real_cup_results=real,
+        )
+        assert not np.array_equal(r1.all_tournament_points, r2.all_tournament_points)
+
+    def test_unknown_names_ignored(self):
+        """Unknown player names in real_cup_results raise no error."""
+        cfg = TournamentConfig(n_simulations=5, random_seed=0)
+        real: RealCupResults = [{"DoesNotExist": 9999, "AlsoFake": 1234}]
+        results = run_monte_carlo(cfg, player_data=REAL_PLAYERS, real_cup_results=real)
+        assert results is not None
+
+    def test_real_results_none_same_as_omitted(self):
+        """Passing real_cup_results=None is identical to not passing it."""
+        cfg = TournamentConfig(n_simulations=20, random_seed=7)
+        r1 = run_monte_carlo(cfg)
+        r2 = run_monte_carlo(cfg, real_cup_results=None)
+        np.testing.assert_array_equal(r1.all_tournament_points, r2.all_tournament_points)

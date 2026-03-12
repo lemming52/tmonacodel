@@ -5,6 +5,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from .config import TournamentConfig
+from .types import CupResultByName
 
 
 @dataclass(frozen=True)
@@ -44,3 +45,21 @@ def make_player_pool(
                 Player(player_id=generic_start + j, name=f"Generic_{j:02d}", country=assigned[j])
             )
     return players
+
+
+def resolve_cup_results(
+    results_by_name: CupResultByName,
+    players: list[Player],
+) -> np.ndarray:
+    """Convert a name-keyed cup result dict into a player-id-indexed array.
+
+    Returns an ndarray of shape (n_players,) with dtype int64.
+    Unknown names are silently dropped (contribute 0 points).
+    """
+    name_to_id = {p.name: p.player_id for p in players}
+    out = np.zeros(len(players), dtype=np.int64)
+    for name, pts in results_by_name.items():
+        pid = name_to_id.get(name)
+        if pid is not None:
+            out[pid] = pts
+    return out
