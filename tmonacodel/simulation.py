@@ -3,7 +3,7 @@ import numpy as np
 
 from .aggregation import SimulationResults
 from .config import TournamentConfig
-from .player import make_player_pool, resolve_cup_results
+from .player import derive_skill, make_player_pool, resolve_cup_results
 from .scoring import build_finish_position_lookup, build_points_table
 from .tournament import simulate_tournament
 from .types import RealCupResults
@@ -30,7 +30,26 @@ def run_monte_carlo(
         config = TournamentConfig()
 
     rng = np.random.default_rng(config.random_seed)
-    players = make_player_pool(config, player_data)
+
+    # Derive skills from real results before building player pool
+    if real_cup_results is not None:
+        completed = [e for e in real_cup_results if e is not None]
+        skill_map, generic_skill = derive_skill(completed, [])
+    else:
+        skill_map, generic_skill = None, 1.0
+
+    players = make_player_pool(
+        config, player_data,
+        skill_map=skill_map,
+        generic_skill=generic_skill,
+    )
+
+    # Build player_skills array from the player pool
+    if skill_map is not None:
+        player_skills: np.ndarray | None = np.array([p.skill for p in players], dtype=float)
+    else:
+        player_skills = None
+
     points_table = build_points_table(config.n_qualifiers)
     finish_pos_lookup = build_finish_position_lookup(config)
 
@@ -54,6 +73,7 @@ def run_monte_carlo(
             config, points_table, finish_pos_lookup, rng,
             fixed_cup_points=fixed_cup_points,
             simulate_mask=simulate_mask,
+            player_skills=player_skills,
         )
         all_tournament_points[sim] = tournament_points
 

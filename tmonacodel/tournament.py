@@ -13,6 +13,7 @@ def simulate_tournament(
     *,
     fixed_cup_points: np.ndarray | None = None,  # shape (n_cups, n_players)
     simulate_mask: np.ndarray | None = None,      # shape (n_cups,), bool
+    player_skills: np.ndarray | None = None,      # shape (n_players,)
 ) -> np.ndarray:
     """
     Simulate one full Elite Cup tournament (n_cups cups).
@@ -32,7 +33,7 @@ def simulate_tournament(
 
     for m in range(config.n_cups):
         if mask[m]:
-            cup_points[m] = simulate_cup(config, points_table, finish_pos_lookup, rng)
+            cup_points[m] = simulate_cup(config, points_table, finish_pos_lookup, rng, player_skills=player_skills)
 
     # Best-N-of-M rule: sum of top `best_of` scores per player
     # Sort descending along cup axis (axis=0), independently per player column

@@ -167,3 +167,29 @@ class TestRunMonteCarlo:
         r1 = run_monte_carlo(cfg)
         r2 = run_monte_carlo(cfg, real_cup_results=None)
         np.testing.assert_array_equal(r1.all_tournament_points, r2.all_tournament_points)
+
+    def test_skills_derived_when_real_results_given(self):
+        """Skilled players (high points) should have better mean_rank than generics."""
+        cfg = TournamentConfig(n_simulations=500, random_seed=42)
+        real: RealCupResults = [
+            {"Mudda": 1000, "Binkss": 900, "Massa": 800},
+            {"Mudda": 1000, "Binkss": 850, "Massa": 750},
+        ]
+        results = run_monte_carlo(cfg, player_data=REAL_PLAYERS, real_cup_results=real)
+        df = results.summary_dataframe()
+
+        mudda_rank = df[df["name"] == "Mudda"]["mean_rank"].values[0]
+        generic_rows = df[df["name"].str.startswith("Generic_")]
+        generic_mean_rank = generic_rows["mean_rank"].mean()
+
+        # Mudda should rank better (lower mean_rank) than average generic
+        assert mudda_rank < generic_mean_rank, (
+            f"Mudda mean_rank {mudda_rank:.1f} should be < generic mean_rank {generic_mean_rank:.1f}"
+        )
+
+    def test_no_real_results_uniform_mechanics(self):
+        """No real_cup_results → uniform mechanics (prob_top_N std should be small)."""
+        cfg = TournamentConfig(n_simulations=500, random_seed=42)
+        results = run_monte_carlo(cfg)
+        probs = results.qualification_probabilities()
+        assert probs.std() < 0.15
